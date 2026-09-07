@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CityManager - Atizapan</title>
+    <title>CityManager - Atizapán de Zaragoza</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="{% static 'css/mapa.css' %}">
@@ -36,8 +36,12 @@
             </div>
         </div>
         <div id="cuadrante-superior-derecho" class="cuadrante">
-            <h2 class="titulo-seccion">Sección <span id="ui-seccion-id">---</span></h2>
-            <div class="tabs-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <h2 class="titulo-seccion" style="margin: 0;">Sección <span id="ui-seccion-id">---</span></h2>
+                <!-- El botón inicia oculto y JS lo mostrará si hay datos -->
+                <button id="btn-toggle-proyeccion" style="display: none; background: #6767a5; color: white; border: none; padding: 5px 10px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 11px;">🔮 Ver proyección</button>
+            </div>
+            <div class="tabs-container" style="margin-bottom: 8px;">
                 <button class="tab-btn activo" onclick="cambiarPestana('ayuntamiento')" id="tab-ayuntamiento">Ayuntamiento</button>
                 <button class="tab-btn" onclick="cambiarPestana('diputacion')" id="tab-diputacion">Diputaciones</button>
             </div>
@@ -56,9 +60,9 @@
         </div>
     </div>
 
-    <!-- SIDEBAR GLOBAL INSTITUCIONAL NAUCALPAN -->
+    <!-- SIDEBAR GLOBAL INSTITUCIONAL ATIZAPAN -->
     <div id="panel-totales-municipio">
-        <h3 class="sidebar-titulo">Atizapan de Zaragoza</h3>
+        <h3 class="sidebar-titulo">Atizapán de Zaragoza</h3>
         <p class="sidebar-subtitulo">Resultados Globales</p>
         <div class="tabs-container-mini" style="margin-bottom: 20px;">
             <button class="tab-btn-mini activo" onclick="cambiarPestanaGlobal('ayuntamiento')" id="tab-global-ayuntamiento">Ayuntamiento</button>
@@ -87,7 +91,8 @@
             <button id="btn-buscar">🔍</button>
             <button id="btn-restaurar-mapa" style="display: none;">⛶ Volver al Municipio</button>
         </div>
-        <div id="mapa-naucalpan"></div> <!-- ID Cambiado para Naucalpan -->
+        <!-- Mantenemos el ID técnico original para que el CSS y JSON sigan funcionando -->
+        <div id="mapa-naucalpan"></div>
     </div>
 
     <div id="modal-promovidos" class="modal-overlay">
