@@ -1,0 +1,109 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CityManager - Atizapan</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{% static 'css/mapa.css' %}">
+</head>
+<body>
+    <div id="dashboard-layout">
+        <div id="cuadrante-superior-izquierdo" class="cuadrante"></div>
+        <div id="cuadrante-inferior-izquierdo" class="cuadrante" style="padding: 20px; display: flex; flex-direction: column; background: white;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h2 class="titulo-seccion" style="font-size: 18px; margin: 0;">Gestión <span id="label-seccion-promovidos" style="color: #b64f80;">Global</span></h2>
+                <button id="btn-vista-completa" style="background: #b64f80; color: white; border: none; padding: 6px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 11px;">⛶ Vista Completa</button>
+            </div>
+            <div class="tabs-container-mini" style="border-bottom: 2px solid #ccc;">
+                <button class="tab-btn-mini activo" onclick="cambiarPestanaPromovidos('lista')" id="tab-promovidos-lista" style="color: #4d4383; font-size: 14px;">Lista</button>
+                <button class="tab-btn-mini" onclick="cambiarPestanaPromovidos('cargar')" id="tab-promovidos-cargar" style="color: #777; font-size: 14px;">Cargar Excel</button>
+            </div>
+            <div id="vista-promovidos-lista" style="flex: 1; overflow-y: auto; margin-top: 10px;">
+                <table class="tabla-promovidos">
+                    <thead><tr><th>Nombre</th><th>Sección</th><th>Estatus</th></tr></thead>
+                    <tbody id="tabla-promovidos-body"></tbody>
+                </table>
+            </div>
+            <div id="vista-promovidos-cargar" style="display: none; flex: 1; margin-top: 10px; flex-direction: column; align-items: center; justify-content: center;">
+                <div id="drop-zone" class="drop-zone">
+                    <p>Arrastra tu archivo <b>PROMOVIDOS.xlsx</b> aquí<br>o <u>haz clic para buscar</u></p>
+                    <input type="file" id="file-input" accept=".xlsx, .xls" style="display: none;">
+                </div>
+                <div id="upload-status" style="margin-top: 15px; font-size: 14px; font-weight: bold; color: #4d4383;"></div>
+            </div>
+        </div>
+        <div id="cuadrante-superior-derecho" class="cuadrante">
+            <h2 class="titulo-seccion">Sección <span id="ui-seccion-id">---</span></h2>
+            <div class="tabs-container">
+                <button class="tab-btn activo" onclick="cambiarPestana('ayuntamiento')" id="tab-ayuntamiento">Ayuntamiento</button>
+                <button class="tab-btn" onclick="cambiarPestana('diputacion')" id="tab-diputacion">Diputaciones</button>
+            </div>
+            <div id="local-dynamic-content">
+                <div class="stats-header" id="stats-container">
+                    <div>Casillas: <b id="stat-casillas">-</b></div>
+                    <div>L. Nominal: <b id="stat-nominal">-</b></div>
+                    <div>Votos: <b id="stat-votos">-</b></div>
+                    <div>Participación: <b id="stat-participacion">-</b></div>
+                </div>
+                <div class="ganador-highlight" id="stat-ganador">🏆 Ganador: -</div>
+                <div style="position: relative; height: 180px; width: 100%;">
+                    <canvas id="grafica-principal"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIDEBAR GLOBAL INSTITUCIONAL NAUCALPAN -->
+    <div id="panel-totales-municipio">
+        <h3 class="sidebar-titulo">Atizapan de Zaragoza</h3>
+        <p class="sidebar-subtitulo">Resultados Globales</p>
+        <div class="tabs-container-mini" style="margin-bottom: 20px;">
+            <button class="tab-btn-mini activo" onclick="cambiarPestanaGlobal('ayuntamiento')" id="tab-global-ayuntamiento">Ayuntamiento</button>
+            <button class="tab-btn-mini" onclick="cambiarPestanaGlobal('diputacion')" id="tab-global-diputacion">Diputaciones</button>
+        </div>
+        <div id="global-dynamic-content">
+            <div class="global-stats-grid tarjeta-perla">
+                <div class="global-stat-item"><span>Casillas</span><b id="g-stat-casillas">-</b></div>
+                <div class="global-stat-item"><span>L. Nominal</span><b id="g-stat-nominal">-</b></div>
+                <div class="global-stat-item"><span>Votos Val.</span><b id="g-stat-votos">-</b></div>
+                <div class="global-stat-item"><span>Participación</span><b id="g-stat-participacion">-</b></div>
+            </div>
+            <div class="ganador-highlight tarjeta-perla global-ganador" id="g-stat-ganador">🏆 Ganador: -</div>
+            <div class="tarjeta-perla" style="position: relative; height: 180px; width: 100%; padding: 15px; box-sizing: border-box; margin-top: 20px;">
+                <canvas id="grafica-global"></canvas>
+            </div>
+        </div>
+        <div class="contenedor-gota">
+            <img src="{% static 'gota.PNG' %}" alt="Gota">
+        </div>
+    </div>
+
+    <div id="mapa-wrapper">
+        <div id="buscador-contenedor">
+            <input type="number" id="input-buscador" placeholder="Buscar sección...">
+            <button id="btn-buscar">🔍</button>
+            <button id="btn-restaurar-mapa" style="display: none;">⛶ Volver al Municipio</button>
+        </div>
+        <div id="mapa-naucalpan"></div> <!-- ID Cambiado para Naucalpan -->
+    </div>
+
+    <div id="modal-promovidos" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-modal" id="close-modal">&times;</span>
+            <h2 style="color: #4d4383; margin-top: 0; margin-bottom: 20px;">Registro Completo de Promovidos <span id="modal-label-seccion" style="color:#b64f80;">(Todas)</span></h2>
+            <div style="overflow-y: auto; max-height: 65vh; border: 1px solid #ddd; border-radius: 8px;">
+                <table class="tabla-promovidos">
+                    <thead><tr><th>Nombre</th><th>Teléfono</th><th>Dirección</th><th>Sección</th><th>Medio</th><th>Fecha</th><th>Estatus</th></tr></thead>
+                    <tbody id="modal-tabla-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="{% static 'js/mapa.js' %}"></script>
+</body>
+</html>
