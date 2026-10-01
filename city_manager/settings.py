@@ -8,13 +8,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-clave-temporal-desarrollo')
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 't')
 
-ALLOWED_HOSTS = ['*', '.railway.app', '.up.railway.app', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = [
+    'city-n-production.up.railway.app',
+    '.railway.app',
+    '.up.railway.app',
+    'localhost',
+    '127.0.0.1',
+    '*',
+]
 allowed_hosts_env = os.environ.get('ALLOWED_HOSTS')
 if allowed_hosts_env:
     ALLOWED_HOSTS.extend([host.strip() for host in allowed_hosts_env.split(',') if host.strip()])
 
 # Dominios seguros para solicitudes POST / CSRF (Crucial en Railway con HTTPS y dominios personalizados)
 CSRF_TRUSTED_ORIGINS = [
+    'https://city-n-production.up.railway.app',
     'https://*.railway.app',
     'https://*.up.railway.app',
     'http://localhost:8000',
@@ -23,6 +31,11 @@ CSRF_TRUSTED_ORIGINS = [
 csrf_env = os.environ.get('CSRF_TRUSTED_ORIGINS')
 if csrf_env:
     CSRF_TRUSTED_ORIGINS.extend([origin.strip() for origin in csrf_env.split(',') if origin.strip()])
+
+# Detección de HTTPS detrás del proxy inverso de Railway
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 
 
 # Aplicaciones instaladas
