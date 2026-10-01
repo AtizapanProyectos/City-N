@@ -4,106 +4,332 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CityManager - Atizapán de Zaragoza</title>
+    <title>CityManager · Centro de Mando Electoral</title>
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="{% static 'css/mapa.css' %}">
 </head>
 <body>
-    <div id="dashboard-layout">
-        <div id="cuadrante-superior-izquierdo" class="cuadrante"></div>
-        <div id="cuadrante-inferior-izquierdo" class="cuadrante" style="padding: 20px; display: flex; flex-direction: column; background: white;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h2 class="titulo-seccion" style="font-size: 18px; margin: 0;">Gestión <span id="label-seccion-promovidos" style="color: #b64f80;">Global</span></h2>
-                <button id="btn-vista-completa" style="background: #b64f80; color: white; border: none; padding: 6px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 11px;">⛶ Vista Completa</button>
-            </div>
-            <div class="tabs-container-mini" style="border-bottom: 2px solid #ccc;">
-                <button class="tab-btn-mini activo" onclick="cambiarPestanaPromovidos('lista')" id="tab-promovidos-lista" style="color: #4d4383; font-size: 14px;">Lista</button>
-                <button class="tab-btn-mini" onclick="cambiarPestanaPromovidos('cargar')" id="tab-promovidos-cargar" style="color: #777; font-size: 14px;">Cargar Excel</button>
-            </div>
-            <div id="vista-promovidos-lista" style="flex: 1; overflow-y: auto; margin-top: 10px;">
-                <table class="tabla-promovidos">
-                    <thead><tr><th>Nombre</th><th>Sección</th><th>Estatus</th></tr></thead>
-                    <tbody id="tabla-promovidos-body"></tbody>
-                </table>
-            </div>
-            <div id="vista-promovidos-cargar" style="display: none; flex: 1; margin-top: 10px; flex-direction: column; align-items: center; justify-content: center;">
-                <div id="drop-zone" class="drop-zone">
-                    <p>Arrastra tu archivo <b>PROMOVIDOS.xlsx</b> aquí<br>o <u>haz clic para buscar</u></p>
-                    <input type="file" id="file-input" accept=".xlsx, .xls" style="display: none;">
-                </div>
-                <div id="upload-status" style="margin-top: 15px; font-size: 14px; font-weight: bold; color: #4d4383;"></div>
-            </div>
-        </div>
-        <div id="cuadrante-superior-derecho" class="cuadrante">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                <h2 class="titulo-seccion" style="margin: 0;">Sección <span id="ui-seccion-id">---</span></h2>
-                <!-- El botón inicia oculto y JS lo mostrará si hay datos -->
-                <button id="btn-toggle-proyeccion" style="display: none; background: #6767a5; color: white; border: none; padding: 5px 10px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 11px;">🔮 Ver proyección</button>
-            </div>
-            <div class="tabs-container" style="margin-bottom: 8px;">
-                <button class="tab-btn activo" onclick="cambiarPestana('ayuntamiento')" id="tab-ayuntamiento">Ayuntamiento</button>
-                <button class="tab-btn" onclick="cambiarPestana('diputacion')" id="tab-diputacion">Diputaciones</button>
-            </div>
-            <div id="local-dynamic-content">
-                <div class="stats-header" id="stats-container">
-                    <div>Casillas: <b id="stat-casillas">-</b></div>
-                    <div>L. Nominal: <b id="stat-nominal">-</b></div>
-                    <div>Votos: <b id="stat-votos">-</b></div>
-                    <div>Participación: <b id="stat-participacion">-</b></div>
-                </div>
-                <div class="ganador-highlight" id="stat-ganador">🏆 Ganador: -</div>
-                <div style="position: relative; height: 180px; width: 100%;">
-                    <canvas id="grafica-principal"></canvas>
-                </div>
-            </div>
-        </div>
+
+    <div id="toast-notificacion" class="toast-exito" role="status" aria-live="polite">
+        Procesamiento completado exitosamente
     </div>
 
-    <!-- SIDEBAR GLOBAL INSTITUCIONAL ATIZAPAN -->
-    <div id="panel-totales-municipio">
-        <h3 class="sidebar-titulo">Atizapán de Zaragoza</h3>
-        <p class="sidebar-subtitulo">Resultados Globales</p>
-        <div class="tabs-container-mini" style="margin-bottom: 20px;">
-            <button class="tab-btn-mini activo" onclick="cambiarPestanaGlobal('ayuntamiento')" id="tab-global-ayuntamiento">Ayuntamiento</button>
-            <button class="tab-btn-mini" onclick="cambiarPestanaGlobal('diputacion')" id="tab-global-diputacion">Diputaciones</button>
+    <div id="loading-overlay" class="pantalla-carga" role="alert" aria-busy="true">
+        <div class="spinner"></div>
+        <h3>Procesando datos</h3>
+        <p>Actualizando modelos predictivos</p>
+    </div>
+
+    <main id="dashboard-layout">
+
+        <!-- Superior izquierdo · ESCUCHA SOCIAL -->
+        <section id="cuadrante-superior-izquierdo" class="cuadrante" aria-label="Escucha social">
+            <div class="panel-header">
+                <h2>Escucha <span class="acento">Social</span></h2>
+            </div>
+
+            <div class="panel-body">
+                <div id="escucha-vacio" class="estado-vacio">
+                    <span>Sin datos procesados. Carga los reportes desde el panel superior del mapa.</span>
+                </div>
+
+                <div id="escucha-contenido" style="display: none; flex-direction: column; flex: 1; min-height: 0;">
+                    <div class="tabs-metricas" id="escucha-tabs"></div>
+
+                    <!-- Sentimiento: dos donas circulares completas -->
+                    <div id="escucha-vista-dual" style="display: none; flex-direction: column; flex: 1; min-height: 0;">
+                        <div class="escucha-dual-wrap">
+                            <div class="dona-candidato">
+                                <div class="dona-lienzo"><canvas id="chart-escucha-c1"></canvas></div>
+                                <h3 id="ui-cand1-name-dual" class="dona-nombre">CANDIDATO 1</h3>
+                                <div class="dona-leyenda">
+                                    <span class="dona-chip"><i class="punto-pos"></i><span id="ui-cand1-pos">Positivos: 0</span></span>
+                                    <span class="dona-chip"><i class="punto-neg"></i><span id="ui-cand1-neg">Negativos: 0</span></span>
+                                </div>
+                            </div>
+                            <div class="dona-candidato">
+                                <div class="dona-lienzo"><canvas id="chart-escucha-c2"></canvas></div>
+                                <h3 id="ui-cand2-name-dual" class="dona-nombre">CANDIDATO 2</h3>
+                                <div class="dona-leyenda">
+                                    <span class="dona-chip"><i class="punto-pos"></i><span id="ui-cand2-pos">Positivos: 0</span></span>
+                                    <span class="dona-chip"><i class="punto-neg"></i><span id="ui-cand2-neg">Negativos: 0</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resto de métricas: barras -->
+                    <div id="escucha-vista-comparativa" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+                        <div class="escucha-comp-wrap"><canvas id="chart-escucha-comp"></canvas></div>
+                        <div class="escucha-comp-chips">
+                            <div class="chip-candidato">
+                                <span class="chip-dot" style="background: var(--pan-blue);"></span>
+                                <span id="ui-cand1-name-comp">Candidato 1</span>
+                                <span id="ui-cand1-val">-</span>
+                                <span id="ui-cand1-pct">-</span>
+                            </div>
+                            <div class="chip-candidato">
+                                <span class="chip-dot" style="background: var(--c-magenta);"></span>
+                                <span id="ui-cand2-name-comp">Candidato 2</span>
+                                <span id="ui-cand2-val">-</span>
+                                <span id="ui-cand2-pct">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Superior derecho · DETALLE DE SECCIÓN -->
+        <section id="cuadrante-superior-derecho" class="cuadrante" aria-label="Detalle de sección">
+            <div class="panel-header">
+                <h2 class="titulo-seccion">Sección <span class="acento" id="ui-seccion-id">---</span></h2>
+                <button id="btn-toggle-proyeccion" class="btn-proyeccion" type="button" style="display: none;">Ver proyección</button>
+            </div>
+
+            <div class="tabs-container">
+                <button type="button" class="tab-btn activo-gradiente" id="tab-ayuntamiento" onclick="cambiarPestana('ayuntamiento')">Ayuntamiento</button>
+                <button type="button" class="tab-btn" id="tab-diputacion" onclick="cambiarPestana('diputacion')">Diputaciones</button>
+            </div>
+
+            <div class="panel-body">
+                <div id="local-dynamic-content" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+                    <div class="stats-header" id="stats-container">
+                        <div class="stat-cell"><span class="lbl">Casillas</span><b id="stat-casillas">-</b></div>
+                        <div class="stat-cell"><span class="lbl">Lista nominal</span><b id="stat-nominal">-</b></div>
+                        <div class="stat-cell"><span class="lbl">Votos válidos</span><b id="stat-votos">-</b></div>
+                        <div class="stat-cell">
+                            <span class="lbl">Participación</span><b id="stat-participacion">-</b>
+                            <div class="barra-progreso"><div class="barra-progreso-fill" id="barra-participacion-local"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="ganador-row">
+                        <div class="ganador-highlight" id="stat-ganador">Ganador: -</div>
+                        <div id="stat-meta-container" style="display: none;">
+                            Meta segura (50% + 1): <span id="stat-meta">-</span> votos
+                        </div>
+                    </div>
+
+                    <div id="etiqueta-proyeccion-local" style="display: none;">
+                        Gráfica calculada con proyecciones e índice de sentimiento
+                    </div>
+
+                    <div class="grafica-principal-wrap">
+                        <canvas id="grafica-principal"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Inferior izquierdo · PROMOVIDOS -->
+        <section id="cuadrante-inferior-izquierdo" class="cuadrante" aria-label="Promovidos">
+            <div class="panel-header"> 
+                <h2>Promovidos <span class="acento" id="label-seccion-promovidos">Global</span></h2>
+                <button type="button" id="btn-vista-completa" class="btn-magenta">Vista completa</button>
+            </div>
+
+            <div class="panel-body">
+                <div class="tabs-promovidos">
+                    <button type="button" id="tab-promovidos-lista">Padrón Registrado</button>
+                </div>
+
+                <div id="vista-promovidos-lista" class="vista-lista-scroll">
+                    <table class="tabla-promovidos">
+                        <thead>
+                            <tr><th>Nombre</th><th>Sección</th><th>Estatus</th></tr>
+                        </thead>
+                        <tbody id="tabla-promovidos-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ============ SIDEBAR · RESULTADOS GLOBALES ============ -->
+    <aside id="panel-totales-municipio" aria-label="Resultados globales">
+        <div class="sidebar-brand">
+            <div class="marca-dot"></div>
+            <div>
+                <h1 class="sidebar-titulo">Naucalpan de Juárez </h1>
+                <p class="sidebar-subtitulo">Resultados globales</p>
+            </div>
         </div>
+
+        <div class="sidebar-topbar">
+            <div class="tabs-container-mini" style="flex: 1;">
+                <button type="button" class="tab-btn-mini activo" id="tab-global-ayuntamiento" onclick="cambiarPestanaGlobal('ayuntamiento')">Ayuntamiento</button>
+                <button type="button" class="tab-btn-mini" id="tab-global-diputacion" onclick="cambiarPestanaGlobal('diputacion')">Diputaciones</button>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; margin: 4px 0 12px;">
+            <button id="btn-toggle-proyeccion-global" class="btn-proyeccion" type="button" style="display: none;">Ver proyección</button>
+        </div>
+
         <div id="global-dynamic-content">
             <div class="global-stats-grid tarjeta-perla">
                 <div class="global-stat-item"><span>Casillas</span><b id="g-stat-casillas">-</b></div>
                 <div class="global-stat-item"><span>L. Nominal</span><b id="g-stat-nominal">-</b></div>
-                <div class="global-stat-item"><span>Votos Val.</span><b id="g-stat-votos">-</b></div>
-                <div class="global-stat-item"><span>Participación</span><b id="g-stat-participacion">-</b></div>
+                <div class="global-stat-item"><span>Votos válidos</span><b id="g-stat-votos">-</b></div>
+                <div class="global-stat-item">
+                    <span>Participación</span><b id="g-stat-participacion">-</b>
+                    <div class="barra-progreso"><div class="barra-progreso-fill" id="barra-participacion-global"></div></div>
+                </div>
             </div>
-            <div class="ganador-highlight tarjeta-perla global-ganador" id="g-stat-ganador">🏆 Ganador: -</div>
-            <div class="tarjeta-perla" style="position: relative; height: 180px; width: 100%; padding: 15px; box-sizing: border-box; margin-top: 20px;">
+
+            <div class="tarjeta-perla global-ganador" id="g-stat-ganador">Ganador: -</div>
+
+            <div id="g-stat-meta-container" style="display: none;">
+                Meta segura (50% + 1): <span id="g-stat-meta">-</span> votos
+            </div>
+
+            <div id="etiqueta-proyeccion-global" style="display: none;">
+                Proyección basada en encuestas e índice de sentimiento
+            </div>
+
+            <div class="tarjeta-perla grafica-card-sidebar">
                 <canvas id="grafica-global"></canvas>
             </div>
         </div>
-        <div class="contenedor-gota">
-            <img src="{% static 'gota.PNG' %}" alt="Gota">
-        </div>
-    </div>
 
+        <button type="button" onclick="abrirModalEncuestas()" class="btn-gestion-encuestas">Gestión de encuestas</button>
+    </aside>
+
+    <!-- ============ MAPA ============ -->
     <div id="mapa-wrapper">
         <div id="buscador-contenedor">
-            <input type="number" id="input-buscador" placeholder="Buscar sección...">
-            <button id="btn-buscar">🔍</button>
-            <button id="btn-restaurar-mapa" style="display: none;">⛶ Volver al Municipio</button>
+            <input type="number" id="input-buscador" placeholder="Buscar sección..." aria-label="Número de sección">
+            <button type="button" id="btn-buscar">Buscar</button>
+            <button type="button" id="btn-restaurar-mapa" style="display: none;">Volver al municipio</button>
         </div>
-        <!-- Mantenemos el ID técnico original para que el CSS y JSON sigan funcionando -->
+
+        <div id="botones-globales-flotantes">
+            <button class="btn-proyeccion" onclick="document.getElementById('file-promovidos-global').click()">Cargar Padrón Global (Excel)</button>
+            <button class="btn-magenta" onclick="document.getElementById('file-escucha-global').click()">Cargar Escucha Social (2 Excel)</button>
+
+            <input type="file" id="file-promovidos-global" accept=".xlsx, .xls" style="display: none;">
+            <input type="file" id="file-escucha-global" accept=".xlsx, .xls" multiple style="display: none;" onchange="procesarArchivosEscucha(event)">
+        </div>
+
+<!-- Glosario de intensidad de voto (Filtro Interactivo) -->
+        <div id="leyenda-mapa">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h4 style="margin: 0; font-size: 12.5px; font-weight: 800; color: var(--pan-navy); text-transform: uppercase;">Intensidad de Voto</h4>
+                <button type="button" id="btn-limpiar-filtro-mapa" style="display: none; background: none; border: none; color: var(--c-magenta); font-size: 10px; font-weight: 800; cursor: pointer; text-decoration: underline; padding: 0;">Limpiar</button>
+            </div>
+            <div class="leyenda-item" data-opacidad="0.95" title="Click para filtrar">
+                <div class="color-box" style="background: linear-gradient(to right, #0055A6 50%, #B3282D 50%); opacity: 0.95;"></div> 75% a 100% (Súper intenso)
+            </div>
+            <div class="leyenda-item" data-opacidad="0.75" title="Click para filtrar">
+                <div class="color-box" style="background: linear-gradient(to right, #0055A6 50%, #B3282D 50%); opacity: 0.75;"></div> 50% a 75% (Muy intenso)
+            </div>
+            <div class="leyenda-item" data-opacidad="0.55" title="Click para filtrar">
+                <div class="color-box" style="background: linear-gradient(to right, #0055A6 50%, #B3282D 50%); opacity: 0.55;"></div> 25% a 50% (Intenso)
+            </div>
+            <div class="leyenda-item" data-opacidad="0.35" title="Click para filtrar">
+                <div class="color-box" style="background: linear-gradient(to right, #0055A6 50%, #B3282D 50%); opacity: 0.35;"></div> 10% a 25% (Tenue)
+            </div>
+        </div>
+
         <div id="mapa-naucalpan"></div>
     </div>
 
+    <!-- ============ MODAL · REGISTRO DE PROMOVIDOS ============ -->
     <div id="modal-promovidos" class="modal-overlay">
         <div class="modal-content">
-            <span class="close-modal" id="close-modal">&times;</span>
-            <h2 style="color: #4d4383; margin-top: 0; margin-bottom: 20px;">Registro Completo de Promovidos <span id="modal-label-seccion" style="color:#b64f80;">(Todas)</span></h2>
-            <div style="overflow-y: auto; max-height: 65vh; border: 1px solid #ddd; border-radius: 8px;">
+            <span class="close-modal" id="close-modal" role="button" aria-label="Cerrar">&times;</span>
+            <h2 class="modal-titulo">Registro completo de promovidos <span id="modal-label-seccion" style="color: var(--c-magenta);">(Todas)</span></h2>
+            <div class="modal-tabla-scroll">
                 <table class="tabla-promovidos">
-                    <thead><tr><th>Nombre</th><th>Teléfono</th><th>Dirección</th><th>Sección</th><th>Medio</th><th>Fecha</th><th>Estatus</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th><th>Teléfono</th><th>Dirección</th>
+                            <th>Sección</th><th>Medio</th><th>Fecha</th><th>Estatus</th>
+                        </tr>
+                    </thead>
                     <tbody id="modal-tabla-body"></tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL · GESTIÓN DE ENCUESTAS ============ -->
+    <div id="modal-encuestas" class="modal-overlay">
+        <div class="modal-content modal-sm" style="max-width: 950px;">
+            <span class="close-modal" onclick="cerrarModalEncuestas()" role="button" aria-label="Cerrar">&times;</span>
+            <h2 class="modal-titulo centrado">Gestión de encuestas</h2>
+
+            <div class="tabs-container" style="margin: 0 0 18px;">
+                <button type="button" class="tab-btn activo" id="tab-modal-promedio" onclick="cambiarTabEncuestas('promedio')">Promedio</button>
+                <button type="button" class="tab-btn" id="tab-modal-historial" onclick="cambiarTabEncuestas('historial')" style="background: transparent; color: #777;">Historial</button>
+                <button type="button" class="tab-btn" id="tab-modal-agregar" onclick="cambiarTabEncuestas('agregar')" style="background: transparent; color: #777;">Agregar Nueva</button>
+            </div>
+
+            <div id="vista-modal-promedio" style="display: block;">
+                <div class="grafica-modal">
+                    <canvas id="grafica-encuestas"></canvas>
+                </div>
+                <div id="promedio-vacio" class="estado-vacio">
+                    <span>Aún no hay encuestas registradas. Agrega la primera en la pestaña "Agregar Nueva".</span>
+                </div>
+            </div>
+
+            <div id="vista-modal-historial" style="display: none;">
+                <div class="historial-toolbar">
+                    <button type="button" id="btn-reiniciar-encuestas" class="btn-peligro" disabled>Reiniciar historial de encuestas</button>
+                </div>
+                <div class="historial-scroll">
+                    <table class="tabla-promovidos" style="text-align: center;">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th><th>Casa</th>
+                                <th style="color: #0055A6;">PAN</th>
+                                <th style="color: #009639;">PRI</th>
+                                <th style="color: #FFD100;">PRD</th>
+                                <th style="color: #5CB85C;">PVEM</th>
+                                <th style="color: #E20613;">PT</th>
+                                <th style="color: #F37021;">MC</th>
+                                <th style="color: #B3282D;">MORENA</th>
+                                <th style="color: #14B5B4;">NAEM</th>
+                                <th style="color: #a7b4c9;">IND</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-historial-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="vista-modal-agregar" style="display: none;">
+                <form id="form-encuesta" onsubmit="return false;">
+                    <input type="hidden" id="enc-id" value="">
+                    <input type="text" id="enc-casa" class="input-casa" placeholder="Casa encuestadora (Ej. Rubrum)" required>
+
+                    <div class="form-encuesta-grid">
+                        <label>PAN % <input type="number" step="0.1" id="enc-pan" value="0"></label>
+                        <label>PRI % <input type="number" step="0.1" id="enc-pri" value="0"></label>
+                        <label>MORENA % <input type="number" step="0.1" id="enc-morena" value="0"></label>
+                        <label>MC % <input type="number" step="0.1" id="enc-mc" value="0"></label>
+                        <label>PVEM % <input type="number" step="0.1" id="enc-pvem" value="0"></label>
+                        <label>PRD % <input type="number" step="0.1" id="enc-prd" value="0"></label>
+                        <label>PT % <input type="number" step="0.1" id="enc-pt" value="0"></label>
+                        <label>NAEM % <input type="number" step="0.1" id="enc-naem" value="0"></label>
+                        <label class="campo-full">Indecisos % <input type="number" step="0.1" id="enc-indecisos" value="0"></label>
+                    </div>
+
+                    <div id="total-encuesta" class="total-encuesta-pill" style="color: red;">Total: 0.0%</div>
+
+                    <div class="form-acciones">
+                        <button type="button" id="btn-cancelar-edicion" onclick="cancelarEdicion()" class="tab-btn" style="display: none;">Cancelar</button>
+                        <button type="button" id="btn-guardar-encuesta" onclick="guardarNuevaEncuesta()" class="tab-btn activo-gradiente">Procesar Encuesta</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class VotacionAyuntamiento(models.Model):
     seccion = models.IntegerField(unique=True)
     casillas = models.IntegerField()
@@ -49,3 +50,24 @@ class Promovido(models.Model):
 
     def __str__(self):
         return f"{self.nombre_completo} - {self.seccion_electoral}"
+
+class Encuesta(models.Model):
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    casa_encuestadora = models.CharField(max_length=100, default='General', blank=True)
+    
+    pan = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+    pri = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+    prd = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+    pvem = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+    pt = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+    mc = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+    morena = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+    naem = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+    
+    indecisos = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+
+    class Meta:
+        ordering = ['-fecha_registro']
+
+    def __str__(self):
+        return f"{self.casa_encuestadora} - {self.fecha_registro.strftime('%d/%m/%Y')}"
