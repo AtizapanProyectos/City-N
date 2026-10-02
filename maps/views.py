@@ -40,10 +40,13 @@ def safe_percentage(val):
 def mapa_view(request):
     return render(request, 'maps/mapa.html')
 
-def calcular_proyeccion_generica(LN, Vt, historicos, eg_dinamico, Ss=0.6, promovidos_count=0):
+def calcular_proyeccion_generica(LN, Vt, historicos, eg_dinamico, Ss=0.6, promovidos_count=0, casillas=0):
     if LN == 0 or Vt == 0: 
         return None
     
+    # REDUCCIÓN DEL 10% APLICADA SOLO A PROYECCIONES
+    FACTOR_PROYECCION = 0.90
+
     participacion_historica = Vt / LN
     V_esperados = int(LN * participacion_historica)
     Pp = (promovidos_count / LN) if LN > 0 else 0  
@@ -74,16 +77,28 @@ def calcular_proyeccion_generica(LN, Vt, historicos, eg_dinamico, Ss=0.6, promov
     total_fuerza = sum(fuerza_bruta.values())
     proyecciones = {}
     
+    # Reducción matemática general a votos y participación
+    V_esperados_reducidos = int(V_esperados * FACTOR_PROYECCION)
+    
     for partido in partidos:
         porcentaje_real = fuerza_bruta[partido] / total_fuerza if total_fuerza > 0 else 0
-        proyecciones[partido] = int(V_esperados * porcentaje_real)
+        proyecciones[partido] = int(V_esperados_reducidos * porcentaje_real)
         
     if proyecciones:
         proyecciones['ganador'] = max(proyecciones, key=proyecciones.get).upper()
-        proyecciones['meta_ganar'] = int((V_esperados / 2) + 1)
+        meta_bruta = (V_esperados / 2) + 1
+        proyecciones['meta_ganar'] = int(meta_bruta * FACTOR_PROYECCION)
+        proyecciones['num_votos_validos'] = V_esperados_reducidos
+        proyecciones['participacion'] = round((V_esperados_reducidos / LN * 100), 2) if LN > 0 else 0
+        proyecciones['lista_nominal'] = LN
+        proyecciones['casillas'] = casillas
     else:
         proyecciones['ganador'] = 'N/A'
         proyecciones['meta_ganar'] = 0
+        proyecciones['num_votos_validos'] = 0
+        proyecciones['participacion'] = 0
+        proyecciones['lista_nominal'] = LN
+        proyecciones['casillas'] = casillas
         
     return proyecciones
 
@@ -111,7 +126,7 @@ def obtener_datos_seccion(request, num_seccion):
             historicos = { p: getattr(obj, p, 0) for p in ['pan', 'pri', 'prd', 'pvem', 'pt', 'mc', 'morena', 'naem'] }
             datos['proyeccion'] = calcular_proyeccion_generica(
                 obj.lista_nominal, obj.num_votos_validos, historicos, eg_dinamico, 
-                Ss=factor_escucha, promovidos_count=promovidos_count
+                Ss=factor_escucha, promovidos_count=promovidos_count, casillas=obj.casillas
             )
             return datos
 
@@ -161,7 +176,7 @@ def obtener_datos_totales(request):
             }
             datos['proyeccion'] = calcular_proyeccion_generica(
                 totales['lista_nominal'], totales['num_votos_validos'], votos_partidos, eg_dinamico, 
-                Ss=factor_escucha, promovidos_count=promovidos_count_total
+                Ss=factor_escucha, promovidos_count=promovidos_count_total, casillas=totales['casillas']
             )
             return datos
 
@@ -173,7 +188,6 @@ def obtener_datos_totales(request):
             sec_str = str(s.seccion)
             historicos = { p: getattr(s, p, 0) for p in ['pan', 'pri', 'prd', 'pvem', 'pt', 'mc', 'morena', 'naem'] }
             
-            # Cálculo de Porcentaje Histórico Real
             votos_validos = s.num_votos_validos if s.num_votos_validos else sum(historicos.values())
             ganador_hist = str(s.partido_ganador).upper() if s.partido_ganador else 'N/A'
             pct_hist = 0
@@ -185,10 +199,9 @@ def obtener_datos_totales(request):
                 'porcentaje': pct_hist
             }
             
-            # Cálculo de Porcentaje de Proyección
             proy = calcular_proyeccion_generica(
                 s.lista_nominal, s.num_votos_validos, historicos, eg_dinamico, 
-                Ss=factor_escucha, promovidos_count=promovidos_por_seccion.get(s.seccion, 0)
+                Ss=factor_escucha, promovidos_count=promovidos_por_seccion.get(s.seccion, 0), casillas=s.casillas
             )
             
             if proy and proy.get('ganador') and proy['ganador'] != 'N/A':

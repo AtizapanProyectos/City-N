@@ -19,11 +19,8 @@ let datosEscuchaProcesados = [];
 
 let isGeoJsonLoaded = false;
 let isTotalesLoaded = false;
-let filtroIntensidadActivo = null; // NUEVA VARIABLE PARA EL FILTRO
+let filtroIntensidadActivo = null;
 
-/* =====================================================================
-   PLUGINS DE CHART.JS
-   ===================================================================== */
 function dibujarPill(ctx, xCentro, yCentro, texto, colorTexto, colorFondoPill) {
     ctx.save();
     ctx.font = "700 10px Montserrat, sans-serif";
@@ -191,7 +188,6 @@ function obtenerOpacidad(pct) {
     return 0.95;
 }
 
-// NUEVA FUNCIÓN PARA INICIALIZAR EL FILTRO DE LA LEYENDA
 function inicializarFiltrosLeyenda() {
     const items = document.querySelectorAll('.leyenda-item');
     const btnLimpiar = document.getElementById('btn-limpiar-filtro-mapa');
@@ -201,18 +197,16 @@ function inicializarFiltrosLeyenda() {
             const opacidadClic = parseFloat(this.getAttribute('data-opacidad'));
             
             if (filtroIntensidadActivo === opacidadClic) {
-                // Si ya está activo, lo apagamos
                 filtroIntensidadActivo = null;
                 items.forEach(i => i.classList.remove('filtro-activo'));
                 if(btnLimpiar) btnLimpiar.style.display = 'none';
             } else {
-                // Si no, lo prendemos
                 filtroIntensidadActivo = opacidadClic;
                 items.forEach(i => i.classList.remove('filtro-activo'));
                 this.classList.add('filtro-activo');
                 if(btnLimpiar) btnLimpiar.style.display = 'block';
             }
-            colorearMapaGlobal(); // Repintamos todo el mapa para aplicar el filtro
+            colorearMapaGlobal(); 
         });
     });
 
@@ -244,14 +238,11 @@ function colorearMapaGlobal() {
             layer.options.originalFillColor = baseColor;
             layer.options.originalFillOpacity = opacidad;
 
-            // LOGICA DEL FILTRO
             if (filtroIntensidadActivo !== null && opacidad !== filtroIntensidadActivo) {
-                // Apagar visualmente (color gris transparente)
                 if (capaResaltadaActual !== layer) {
                     layer.setStyle({ fillColor: '#ffffff', fillOpacity: 0.2, weight: 1, color: '#cbd5e1' });
                 }
             } else {
-                // Mostrar normal
                 if (capaResaltadaActual !== layer) {
                     layer.setStyle({ fillColor: baseColor, fillOpacity: opacidad, weight: 1, color: '#2a244d' });
                 }
@@ -260,7 +251,6 @@ function colorearMapaGlobal() {
             layer.options.originalFillColor = colorFondo;
             layer.options.originalFillOpacity = 0.45;
 
-            // LÓGICA DEL FILTRO PARA CAPAS SIN GANADOR (Empates o grises)
             if (filtroIntensidadActivo !== null) {
                 if (capaResaltadaActual !== layer) {
                     layer.setStyle({ fillColor: '#ffffff', fillOpacity: 0.2, weight: 1, color: '#cbd5e1' });
@@ -278,7 +268,7 @@ document.addEventListener('DOMContentLoaded', function() {
     inicializarMapa(); 
     cargarTablaPromovidos(); 
     configurarEventosGlobales();
-    inicializarFiltrosLeyenda(); // INICIALIZAMOS LOS FILTROS
+    inicializarFiltrosLeyenda(); 
     
     fetch('/api/escucha-social/').then(r => r.json()).then(res => {
         if(res.status === 'ok' && res.data && res.data.length === 2) {
@@ -389,7 +379,6 @@ function inicializarMapa() {
                         let baseColor = this.options.originalFillColor || colorFondo;
                         let opacity = this.options.originalFillOpacity || (baseColor === colorFondo ? 0.45 : 0.55);
                         
-                        // Lógica del hover de salida si hay filtro
                         if (filtroIntensidadActivo !== null && opacity !== filtroIntensidadActivo) {
                             this.setStyle({ fillColor: '#ffffff', fillOpacity: 0.2, weight: 1, color: '#cbd5e1' });
                         } else {
@@ -475,6 +464,10 @@ function abrirDashboardElectoral(seccion, capa) {
         seccionActivaFiltro = seccion;
         document.getElementById('label-seccion-promovidos').innerText = `(Sección ${seccion})`;
         cargarTablaPromovidos(); cambiarPestana('ayuntamiento'); 
+    }).catch(err => {
+        console.error("Error al cargar datos:", err);
+        datosGlobales = { error: true };
+        cambiarPestana('ayuntamiento');
     });
 }
 
@@ -486,19 +479,38 @@ window.cambiarPestana = function(tipo) {
 };
 
 function renderizarPestana() {
-    if (!datosGlobales) return; const datos = datosGlobales[pestanaActual]; if (!datos) return;
+    if (!datosGlobales) return; 
+    
     const btnProy = document.getElementById('btn-toggle-proyeccion');
-    const etiquetaProy = document.getElementById('etiqueta-proyeccion-local');
     const contenedorMeta = document.getElementById('stat-meta-container');
     const metaValor = document.getElementById('stat-meta');
+
+    if (datosGlobales.error || !datosGlobales[pestanaActual]) {
+        if (btnProy) btnProy.style.display = 'none';
+        if (contenedorMeta) contenedorMeta.style.display = 'none';
+        
+        document.getElementById('stat-casillas').innerText = "0";
+        document.getElementById('stat-nominal').innerText = "0";
+        document.getElementById('stat-votos').innerText = "0";
+        document.getElementById('stat-participacion').innerText = "0%";
+        const barraLocal = document.getElementById('barra-participacion-local');
+        if (barraLocal) barraLocal.style.width = '0%';
+        
+        const elGanador = document.getElementById('stat-ganador');
+        if (elGanador) elGanador.innerHTML = `<span style="color: #5c6b85;">Sin datos en la base de datos</span>`;
+        
+        if (chartInstancia) { chartInstancia.destroy(); chartInstancia = null; }
+        return;
+    }
+
+    const datos = datosGlobales[pestanaActual]; 
     
     if (!datos.proyeccion || datos.num_votos_validos === 0) {
         if (btnProy) btnProy.style.display = 'none';
-        etiquetaProy.style.display = 'none'; contenedorMeta.style.display = 'none';
+        contenedorMeta.style.display = 'none';
         if (modoProyeccion) { modoProyeccion = false; if(btnProy) { btnProy.innerText = "Ver proyección"; btnProy.style.background = "linear-gradient(135deg, #0055A6, #001B44)"; } }
     } else { 
         if (btnProy) btnProy.style.display = 'inline-block'; 
-        etiquetaProy.style.display = modoProyeccion ? 'block' : 'none';
         if (modoProyeccion && datos.proyeccion.meta_ganar > 0) {
             contenedorMeta.style.display = 'block';
             metaValor.innerText = datos.proyeccion.meta_ganar.toLocaleString();
@@ -511,13 +523,14 @@ function renderizarPestana() {
     const contenedor = document.getElementById('local-dynamic-content');
     contenedor.classList.remove('fade-efecto'); void contenedor.offsetWidth; contenedor.classList.add('fade-efecto');
 
-    animarContador(document.getElementById('stat-casillas'), datos.casillas);
-    animarContador(document.getElementById('stat-nominal'), datos.lista_nominal);
-    animarContador(document.getElementById('stat-votos'), datos.num_votos_validos);
-    animarContador(document.getElementById('stat-participacion'), parseFloat(datos.participacion) || 0, { sufijo: '%' });
+    // SE ACTUALIZARON PARA TOMAR FUENTEDATOS EN VEZ DE DATOS (Aplica el 10% cuando es proyección)
+    animarContador(document.getElementById('stat-casillas'), fuenteDatos.casillas);
+    animarContador(document.getElementById('stat-nominal'), fuenteDatos.lista_nominal);
+    animarContador(document.getElementById('stat-votos'), fuenteDatos.num_votos_validos);
+    animarContador(document.getElementById('stat-participacion'), parseFloat(fuenteDatos.participacion) || 0, { sufijo: '%' });
 
     const barraLocal = document.getElementById('barra-participacion-local');
-    if (barraLocal) barraLocal.style.width = Math.min(parseFloat(datos.participacion) || 0, 100) + '%';
+    if (barraLocal) barraLocal.style.width = Math.min(parseFloat(fuenteDatos.participacion) || 0, 100) + '%';
     
     const elGanador = document.getElementById('stat-ganador');
     const prefijo = modoProyeccion ? "Proyectado: " : "Ganador: ";
@@ -556,7 +569,7 @@ function renderizarPestana() {
         options: { 
             indexAxis: 'x',
             responsive: true, maintainAspectRatio: false, 
-            layout: { padding: { top: hayMeta ? 38 : 22, bottom: 10 } }, 
+            layout: { padding: { top: hayMeta ? 38 : 22, bottom: 4 } }, 
             plugins: { 
                 legend: { display: false }, 
                 tooltip: tooltipInstitucional(),
@@ -570,6 +583,8 @@ function renderizarPestana() {
             animation: { duration: 800, easing: 'easeOutQuart' } 
         } 
     });
+
+    requestAnimationFrame(() => { if (chartInstancia) chartInstancia.resize(); });
 }
 
 function cargarDatosTotales() { 
@@ -602,17 +617,15 @@ function renderizarPestanaGlobal() {
     if (!datos) return;
     
     const btnProyG = document.getElementById('btn-toggle-proyeccion-global');
-    const etiquetaProyG = document.getElementById('etiqueta-proyeccion-global');
     const contenedorMetaG = document.getElementById('g-stat-meta-container');
     const metaValorG = document.getElementById('g-stat-meta');
 
     if (!datos.proyeccion || datos.num_votos_validos === 0) {
         if (btnProyG) btnProyG.style.display = 'none';
-        etiquetaProyG.style.display = 'none'; contenedorMetaG.style.display = 'none';
+        contenedorMetaG.style.display = 'none';
         if (modoProyeccionGlobal) { modoProyeccionGlobal = false; if(btnProyG) { btnProyG.innerText = "Ver proyección"; btnProyG.style.background = "linear-gradient(135deg, #0055A6, #001B44)"; } }
     } else { 
         if (btnProyG) btnProyG.style.display = 'inline-block'; 
-        etiquetaProyG.style.display = modoProyeccionGlobal ? 'block' : 'none';
         if (modoProyeccionGlobal && datos.proyeccion.meta_ganar > 0) {
             contenedorMetaG.style.display = 'block';
             metaValorG.innerText = datos.proyeccion.meta_ganar.toLocaleString();
@@ -625,13 +638,14 @@ function renderizarPestanaGlobal() {
     const contenedorGlobal = document.getElementById('global-dynamic-content');
     contenedorGlobal.classList.remove('fade-efecto'); void contenedorGlobal.offsetWidth; contenedorGlobal.classList.add('fade-efecto');
 
-    animarContador(document.getElementById('g-stat-casillas'), datos.casillas);
-    animarContador(document.getElementById('g-stat-nominal'), datos.lista_nominal);
-    animarContador(document.getElementById('g-stat-votos'), datos.num_votos_validos);
-    animarContador(document.getElementById('g-stat-participacion'), parseFloat(datos.participacion) || 0, { sufijo: '%' });
+    // SE ACTUALIZARON PARA TOMAR FUENTEDATOS EN VEZ DE DATOS
+    animarContador(document.getElementById('g-stat-casillas'), fuenteDatos.casillas);
+    animarContador(document.getElementById('g-stat-nominal'), fuenteDatos.lista_nominal);
+    animarContador(document.getElementById('g-stat-votos'), fuenteDatos.num_votos_validos);
+    animarContador(document.getElementById('g-stat-participacion'), parseFloat(fuenteDatos.participacion) || 0, { sufijo: '%' });
 
     const barraGlobal = document.getElementById('barra-participacion-global');
-    if (barraGlobal) barraGlobal.style.width = Math.min(parseFloat(datos.participacion) || 0, 100) + '%';
+    if (barraGlobal) barraGlobal.style.width = Math.min(parseFloat(fuenteDatos.participacion) || 0, 100) + '%';
     
     const elGanadorGlobal = document.getElementById('g-stat-ganador');
     const prefijoG = modoProyeccionGlobal ? "Proyectado: " : "Ganador: ";
@@ -683,6 +697,8 @@ function renderizarPestanaGlobal() {
             animation: { duration: 800, easing: 'easeOutQuart' } 
         } 
     });
+
+    requestAnimationFrame(() => { if (chartGlobalInstancia) chartGlobalInstancia.resize(); });
 }
 
 function cargarTablaPromovidos() {

@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="{% static 'css/mapa.css' %}">
+    <link rel="stylesheet" href="{% static 'css/mapa.css' %}?v=4.0">
 </head>
 <body>
 
@@ -98,7 +98,7 @@
             </div>
 
             <div class="panel-body">
-                <div id="local-dynamic-content" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+                <div id="local-dynamic-content" class="local-dynamic-content">
                     <div class="stats-header" id="stats-container">
                         <div class="stat-cell"><span class="lbl">Casillas</span><b id="stat-casillas">-</b></div>
                         <div class="stat-cell"><span class="lbl">Lista nominal</span><b id="stat-nominal">-</b></div>
@@ -114,10 +114,6 @@
                         <div id="stat-meta-container" style="display: none;">
                             Meta segura (50% + 1): <span id="stat-meta">-</span> votos
                         </div>
-                    </div>
-
-                    <div id="etiqueta-proyeccion-local" style="display: none;">
-                        Gráfica calculada con proyecciones e índice de sentimiento
                     </div>
 
                     <div class="grafica-principal-wrap">
@@ -189,10 +185,6 @@
                 Meta segura (50% + 1): <span id="g-stat-meta">-</span> votos
             </div>
 
-            <div id="etiqueta-proyeccion-global" style="display: none;">
-                Proyección basada en encuestas e índice de sentimiento
-            </div>
-
             <div class="tarjeta-perla grafica-card-sidebar">
                 <canvas id="grafica-global"></canvas>
             </div>
@@ -217,7 +209,7 @@
             <input type="file" id="file-escucha-global" accept=".xlsx, .xls" multiple style="display: none;" onchange="procesarArchivosEscucha(event)">
         </div>
 
-<!-- Glosario de intensidad de voto (Filtro Interactivo) -->
+        <!-- Glosario de intensidad de voto (Filtro Interactivo) -->
         <div id="leyenda-mapa">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <h4 style="margin: 0; font-size: 12.5px; font-weight: 800; color: var(--pan-navy); text-transform: uppercase;">Intensidad de Voto</h4>
